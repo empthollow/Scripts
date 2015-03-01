@@ -1,0 +1,63 @@
+#!/bin/bash
+if [ "$(id -u)" != "0" ]; then
+echo "You must be root for this to work"
+fi
+
+IFS=$(echo -en "\n\b")
+
+action=$1
+newroot=$2
+
+fluxchroot()
+{
+if [ -f /etc/conf.d/f2hdvar ]; then
+. /etc/conf.d/f2hdvar
+else
+echo "Set f2hdvar" 
+exit >&2
+fi
+test -d $target || $(echo $target "does not exist" && exit >&2)
+#test -n $(mount | grep $target) || mount $partition $target
+if [ -n $(mount | grep $target) ]; then 
+mount $partition $target 
+fi
+cp /etc/resolv.conf /media/targethd/etc/
+mount -o bind /dev /media/targethd/dev
+mount -o bind /proc /media/targethd/proc
+mount -o bind /sys /media/targethd/sys
+}
+
+unflux()
+{
+if [ -f /etc/conf.d/f2hdvar ]; then
+. /etc/conf.d/f2hdvar
+else
+echo "Set f2hdvar" 
+exit >&2
+fi
+umount -l $target/proc > /dev/null
+umount -l $target/sys > /dev/null
+umount -l $target/dev > /dev/null
+umount $target
+}
+
+mountsys()
+{
+mount -o bind /dev $newroot/dev
+mount -o bind /proc $newroot/proc
+mount -o bind /sys $newroot/sys
+}
+
+unmountsys()
+{
+umount $newroot/proc > /dev/null
+umount $newroot/sys > /dev/null
+umount $newroot/dev > /dev/null
+}
+
+case $action in
+	flux	)	fluxchroot ;;
+	unflux	)	unflux ;;
+	unmount	)	unmountsys ;;
+	mount	)	mountsys ;;
+esac
